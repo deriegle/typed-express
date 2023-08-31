@@ -1,66 +1,62 @@
-import { Validator } from "./validator";
+import { ExpressApplication } from "./express";
+import { TypesafeHandler } from "./type-safe";
 
-type ValidationSchema<Query = unknown, Body = unknown, Params = unknown> = {
-  query: Validator<Query>;
-  body: Validator<Body>;
-  params: Validator<Params>;
+type TypeSafeApplicationOverrides<Application extends ExpressApplication> = {
+  delete: TypesafeHandler<Application>;
+  get: TypesafeHandler<Application>;
+  patch: TypesafeHandler<Application>;
+  post: TypesafeHandler<Application>;
+  put: TypesafeHandler<Application>;
 };
 
-type RequestHandlerValidators = Partial<ValidationSchema>;
+type TypeSafeApplication<Application extends ExpressApplication> = Application &
+  TypeSafeApplicationOverrides<Application>;
 
-type ExpressApplication<Request = unknown, Response = unknown> = {
-  request: Request;
-  response: Response;
-  get: (
-    route: string,
-    cb: (req: Request, res: Response) => Promise<void> | void,
-  ) => undefined;
-};
-
-type RequestHandler<Application extends ExpressApplication> = (
-  req: Application["request"],
-  res: Application["response"],
-) => Promise<void> | void;
-
-type TypeSafeApplication<Application extends ExpressApplication> =
-  Application & {
-    get: (
-      route: string,
-      cb: RequestHandler<Application>,
-      validators?: RequestHandlerValidators,
-    ) => void;
-  };
+type ApplicationRouteHandlerMethods<Application extends ExpressApplication> =
+  Pick<Application, "get" | "post" | "patch" | "put" | "delete">;
 
 export const buildApplication = <Application extends ExpressApplication>(
   express: () => Application,
 ): TypeSafeApplication<Application> => {
   const application = express();
-  const originalGet = application.get.bind(application);
-  const typeSafeApplication = application as TypeSafeApplication<Application>;
+  const methodsToOverride: Array<
+    keyof ApplicationRouteHandlerMethods<Application>
+  > = ["get", "post"];
 
-  typeSafeApplication.get = ((route, cb, validators) => {
-    originalGet(route, async (req: any, res: any) => {
-      try {
-        const validatedQuery = await validators?.query?.parseAsync(req.query);
-        const validatedBody = await validators?.body?.parseAsync(req.body);
-        const validatedParams = await validators?.params?.parseAsync(
-          req.params,
-        );
+  for (const method of methodsToOverride) {
+    const originalMethod = application[method].bind(
+      application,
+    ) as Application[typeof method];
 
-        cb(
-          {
+    const typeSafeMethod: TypesafeHandler<Application> = (
+      route,
+      cb,
+      validators,
+    ) => {
+      originalMethod(route, async (req, res) => {
+        try {
+          const validatedQuery = await validators?.query?.parseAsync(req.query);
+          const validatedBody = await validators?.body?.parseAsync(req.body);
+          const validatedParams = await validators?.params?.parseAsync(
+            req.params,
+          );
+
+          const validatedRequest = {
             ...req,
             query: validatedQuery ?? undefined,
             body: validatedBody ?? undefined,
             params: validatedParams ?? undefined,
-          },
-          res,
-        );
-      } catch (error) {
-        return res.status(400).json({ error: true });
-      }
-    });
-  }) as (typeof typeSafeApplication)["get"];
+          } as any;
 
-  return typeSafeApplication;
+          cb(validatedRequest, res);
+        } catch (error) {
+          res.status(400).json({ error: true });
+        }
+      });
+    };
+
+    (application[method] as any) = typeSafeMethod;
+  }
+
+  return application as TypeSafeApplication<Application>;
 };

@@ -4,11 +4,13 @@ import { buildApplication } from "./buildApplication";
 
 const app = buildApplication(express);
 
+app.use(express.json());
+
 app.get(
-  "/test",
+  "/hello",
   (req, res) => {
-    const name = req.query.name;
-    res.send(`Hello ${name}`);
+    const { name } = req.query;
+    res.send(`Hello ${name}.`);
   },
   {
     query: z.object({
@@ -20,9 +22,19 @@ app.get(
   },
 );
 
-app.get("/hello", (req, res) => {
-  const { name = "world" } = req.query as any;
-  res.send(`<html><body><h1>Hello ${name}</h1></body></html>`);
-});
+app.post(
+  "/test",
+  (req, res) => {
+    const { age } = req.body;
+    res.send(
+      `<html><head><title>AGE CALCULATOR</title></head><body><h1>You are ${age} years old.</h1></body></html>`,
+    );
+  },
+  {
+    body: z.object({
+      age: z.number().int(),
+    }),
+  },
+);
 
 app.listen(3000, () => console.log("Listening on port 3000"));
