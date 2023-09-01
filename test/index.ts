@@ -11,7 +11,7 @@ app.get(
   (req, res) => {
     const { age, name } = req.query;
 
-    const message = `Hello ${name}.<br />You are ${age} years old.`;
+    const message = `Hello ${name}. You are ${age} years old.`;
 
     res.send(`
       <html>
