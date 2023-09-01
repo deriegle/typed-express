@@ -21,7 +21,7 @@ export const buildApplication = <Application extends ExpressApplication>(
   const application = express();
   const methodsToOverride: Array<
     keyof ApplicationRouteHandlerMethods<Application>
-  > = ["get", "post"];
+  > = ["get", "post", "put", "patch", "delete"];
 
   for (const method of methodsToOverride) {
     const originalMethod = application[method].bind(
