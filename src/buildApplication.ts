@@ -36,17 +36,18 @@ export const buildApplication = <Application extends ExpressApplication>(
     ) => {
       originalMethod(route, async (req, res) => {
         try {
-          const validatedQuery = await validators?.query?.parseAsync(req.query);
-          const validatedBody = await validators?.body?.parseAsync(req.body);
-          const validatedParams = await validators?.params?.parseAsync(
-            req.params,
-          );
+          const validatedQuery = validators?.query?.parse(req.query);
+          const validatedBody = validators?.body?.parse(req.body);
+          const validatedParams = validators?.params?.parse(req.params);
 
           const validatedRequest = {
             ...req,
-            query: validatedQuery ?? undefined,
-            body: validatedBody ?? undefined,
-            params: validatedParams ?? undefined,
+            query: validatedQuery,
+            body: validatedBody,
+            params: {
+              ...req.params,
+              ...validatedParams,
+            },
           } as any;
 
           cb(validatedRequest, res);

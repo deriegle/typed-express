@@ -12,8 +12,14 @@ app.use(liveReloadRouter);
 app.get(
   "/hello/:name/age/:age",
   (req, res) => {
-    req.params.name;
-    req.params.age;
+    res.send(`
+<html>
+<body>
+<h1>Hello ${req.params.name} 👋,
+You are ${req.params.age} years old.</h1>
+</body>
+</html>
+    `);
   },
   {
     params: z.object({
