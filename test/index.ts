@@ -1,22 +1,45 @@
 import express from "express";
 import { z } from "zod";
 import { buildApplication } from "../src/index";
+import { faker } from "@faker-js/faker";
+import { liveReloadRouter } from "./live-reload";
 
 const app = buildApplication(express);
 
 app.use(express.json());
+app.use(liveReloadRouter);
+
+app.get(
+  "/hello/:name/age/:age",
+  (req, res) => {
+    req.params.name;
+    req.params.age;
+  },
+  {
+    params: z.object({
+      age: z.coerce.number().gt(12),
+    }),
+  },
+);
 
 app.get(
   "/hello",
   (req, res) => {
     const { age, name } = req.query;
 
-    const message = `Hello ${name}. You are ${age} years old.`;
+    const message = `Welcome ${name ?? faker.person.fullName()},<br />You are ${
+      age ??
+      faker.number.int({
+        min: 1,
+        max: 114,
+      })
+    } years old.`;
 
     res.send(`
       <html>
 	  <head>
 	    <title>AGE</title>
+	    <script type="text/javascript" src="http://localhost:3000/live.js"></script>
 	  </head>
 	  <body>
 	    <h1>${message}</h1>
@@ -26,8 +49,8 @@ app.get(
   },
   {
     query: z.object({
-      age: z.coerce.number().int(),
-      name: z.string(),
+      age: z.coerce.number().int().positive().optional(),
+      name: z.string().optional(),
     }),
   },
 );

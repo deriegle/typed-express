@@ -1,3 +1,4 @@
+import { ZodError } from "zod";
 import { ExpressApplication } from "./express";
 import { TypesafeHandler } from "./type-safe";
 
@@ -50,7 +51,16 @@ export const buildApplication = <Application extends ExpressApplication>(
 
           cb(validatedRequest, res);
         } catch (error) {
-          res.status(400).json({ error: true });
+          res.status(400);
+
+          const errors =
+            error instanceof ZodError
+              ? error.errors
+              : error instanceof Error
+              ? [{ message: error.message }]
+              : [{ message: `${error}` }];
+
+          res.json({ errors });
         }
       });
     };
